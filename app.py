@@ -11,7 +11,7 @@ from clustering_models import ClusteringModels
 from feature_engineering import FeatureEngineering
 from data_preprocessing import DataPreprocessor
 
-st.title("Model Training & Performance Dashboard")
+st.title("Customer Conversion Analysis App")
 
 def process_data():
     """Process data through feature engineering and preprocessing pipeline"""
@@ -331,7 +331,7 @@ with regression_tab:
 ######################
 with clustering_tab:
     st.header("Clustering Models")
-    train_tab, input_tab = st.tabs(["Training", "User Inputs"])
+    train_tab, input_tab = st.tabs(["Training", "Clusters"])
     
     with train_tab:
         st.subheader("Train & Evaluate Clustering Models")
