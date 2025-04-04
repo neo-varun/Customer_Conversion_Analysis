@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 import pickle
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 from classification_models import ClassificationModels
 from regression_models import RegressionModels
 from clustering_models import ClusteringModels
@@ -194,8 +197,8 @@ def predict_conversion(input_data, model_name="RandomForest_SMOTE"):
     
     return prediction, conversion_probability
 
-# Create three main tabs
-classification_tab, regression_tab, clustering_tab = st.tabs(["Classification", "Regression", "Clustering"])
+# Create four main tabs
+classification_tab, regression_tab, clustering_tab, eda_tab = st.tabs(["Classification", "Regression", "Clustering", "EDA"])
 
 #########################
 # Classification Models #
@@ -398,3 +401,417 @@ with clustering_tab:
                         
             else:
                 st.warning("Cluster analyses not found. Please retrain the clustering models.")
+
+######################
+# EDA Visualizations #
+######################
+with eda_tab:
+    st.header("Exploratory Data Analysis")
+    
+    # Check if data exists and load raw training data
+    if not os.path.exists('data/train.csv'):
+        st.info("Raw training data not found. Please check that data/train.csv exists.")
+    else:
+        # Load the raw training data
+        df_raw = pd.read_csv('data/train.csv')
+        st.write(f"Loaded raw training data: {df_raw.shape[0]} records with {df_raw.shape[1]} features")
+        
+        # Create tabs for different plot types
+        line_tab, bar_tab, hist_tab, pie_tab, heatmap_tab = st.tabs(["Line Plot", "Bar Chart", "Histogram", "Pie Chart", "Heatmap"])
+        
+        with line_tab:
+            st.subheader("Monthly Price Trends by Product Category")
+            
+            # Get month names for better readability
+            month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            
+            # Add month name column
+            df_raw['month_name'] = df_raw['month'].apply(lambda x: month_names[x-1])
+            
+            # Group by month and category to show price trends by category
+            category_price_by_month = df_raw.groupby(['month', 'month_name', 'page1_main_category'])['price'].mean().reset_index()
+            
+            # Add category name for readability
+            category_map = {1: 'Trousers', 2: 'Skirts', 3: 'Blouses', 4: 'Sale'}
+            category_price_by_month['category_name'] = category_price_by_month['page1_main_category'].map(category_map)
+            
+            # Create figure
+            fig, ax = plt.subplots(figsize=(14, 8))
+            
+            # Define category colors and markers
+            colors = ['#2ecc71', '#3498db', '#9b59b6', '#e74c3c']
+            markers = ['o', 's', '^', 'D']
+            
+            # Get unique months and sort them chronologically
+            months = sorted(category_price_by_month['month'].unique())
+            month_labels = [month_names[m-1] for m in months]
+            
+            # Plot line for each category
+            for i, (category_id, category_name) in enumerate(category_map.items()):
+                # Filter data for this category
+                cat_data = category_price_by_month[category_price_by_month['page1_main_category'] == category_id]
+                
+                if not cat_data.empty:
+                    # Sort by month
+                    cat_data = cat_data.sort_values('month')
+                    
+                    # Plot the line
+                    ax.plot(cat_data['month'], cat_data['price'], 
+                          marker=markers[i], markersize=10, linewidth=3, 
+                          color=colors[i], label=category_name,
+                          alpha=0.8)
+                    
+                    # Add data labels
+                    for x, y in zip(cat_data['month'], cat_data['price']):
+                        ax.annotate(f'${y:.2f}', 
+                                  xy=(x, y), 
+                                  xytext=(0, 10),
+                                  textcoords='offset points',
+                                  ha='center', 
+                                  fontsize=9,
+                                  color=colors[i],
+                                  fontweight='bold')
+            
+            # Add overall average price line
+            overall_price_by_month = df_raw.groupby(['month', 'month_name'])['price'].mean().reset_index()
+            overall_price_by_month = overall_price_by_month.sort_values('month')
+            
+            ax.plot(overall_price_by_month['month'], overall_price_by_month['price'], 
+                  marker='*', markersize=15, linewidth=4, 
+                  color='#000000', label='Overall Average',
+                  alpha=0.6, linestyle='--')
+            
+            # Set x-axis with month names
+            ax.set_xticks(months)
+            ax.set_xticklabels(month_labels, fontsize=12, rotation=45)
+            
+            # Set labels and title
+            ax.set_xlabel('Month', fontsize=14, fontweight='bold')
+            ax.set_ylabel('Average Price ($)', fontsize=14, fontweight='bold')
+            ax.set_title('Average Price Trends by Product Category', fontsize=18, fontweight='bold')
+            
+            # Add grid
+            ax.grid(True, linestyle='--', alpha=0.3)
+            
+            # Remove top and right spines
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            
+            # Create shaded areas for seasons
+            if len(months) >= 12:  # Only if we have data for all months
+                # Define seasons (Spring: 3-5, Summer: 6-8, Fall: 9-11, Winter: 12, 1-2)
+                spring = [3, 4, 5]
+                summer = [6, 7, 8]
+                fall = [9, 10, 11]
+                winter = [12, 1, 2]
+                
+                # Get y-axis limits
+                y_min, y_max = ax.get_ylim()
+                height = y_max - y_min
+                
+                # Add shaded areas for seasons with labels
+                for season, months_list, color, name in [
+                    (spring, [3, 4, 5], '#c4e17f', 'Spring'),
+                    (summer, [6, 7, 8], '#ffdd44', 'Summer'),
+                    (fall, [9, 10, 11], '#e67e22', 'Fall'),
+                    (winter, [12, 1, 2], '#a3d4f7', 'Winter')
+                ]:
+                    # Filter to get months in this season that exist in our data
+                    season_months = [m for m in months_list if m in months]
+                    if season_months:
+                        min_month, max_month = min(season_months), max(season_months)
+                        rect = plt.Rectangle((min_month - 0.5, y_min), 
+                                           max_month - min_month + 1, height,
+                                           color=color, alpha=0.1, zorder=0)
+                        ax.add_patch(rect)
+                        
+                        # Add season label
+                        ax.text(min_month + (max_month - min_month) / 2, y_min + height * 0.05,
+                              name, fontsize=12, ha='center', va='bottom',
+                              bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='none', alpha=0.7))
+            
+            # Add legend with bigger markers
+            legend = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
+                            ncol=5, frameon=True, fontsize=12)
+            
+            # Comment out the problematic code that's causing the AttributeError
+            # for handle in legend.legendHandles:
+            #     handle.set_markersize(10)
+            #     handle.set_linewidth(4)
+            
+            plt.tight_layout()
+            fig.subplots_adjust(bottom=0.2)
+            
+            st.pyplot(fig)
+            st.write("Displays price trends for each product category across months")
+        
+        with bar_tab:
+            st.subheader("Session Distribution by Country")
+            
+            # Get top 10 countries by session count
+            country_counts = df_raw['country'].value_counts().nlargest(10)
+            
+            # Create country map for better labels
+            country_map = {
+                1: 'Australia', 2: 'Austria', 3: 'Belgium', 4: 'British VI', 5: 'Cayman Islands',
+                6: 'Christmas Is.', 7: 'Croatia', 8: 'Cyprus', 9: 'Czech Rep.', 10: 'Denmark',
+                11: 'Estonia', 12: 'Unidentified', 13: 'Faroe Islands', 14: 'Finland', 15: 'France',
+                16: 'Germany', 17: 'Greece', 18: 'Hungary', 19: 'Iceland', 20: 'India', 21: 'Ireland',
+                22: 'Italy', 23: 'Latvia', 24: 'Lithuania', 25: 'Luxembourg', 26: 'Mexico', 27: 'Netherlands',
+                28: 'Norway', 29: 'Poland', 30: 'Portugal', 31: 'Romania', 32: 'Russia', 33: 'San Marino',
+                34: 'Slovakia', 35: 'Slovenia', 36: 'Spain', 37: 'Sweden', 38: 'Switzerland', 39: 'Ukraine',
+                40: 'UAE', 41: 'UK', 42: 'USA'
+            }
+            
+            # Create readable country names
+            country_names = [country_map.get(country, f'Country {country}') for country in country_counts.index]
+            
+            # Create horizontal bar chart
+            fig, ax = plt.subplots(figsize=(10, 8))
+            
+            # Use colormap for aesthetic color gradient
+            colors = plt.cm.viridis(np.linspace(0.1, 0.9, len(country_counts)))
+            
+            # Create horizontal bars
+            bars = ax.barh(country_names, country_counts, color=colors)
+            
+            # Add count labels inside bars
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                label_x_pos = width * 0.95
+                ax.text(label_x_pos, bar.get_y() + bar.get_height()/2, f'{width:,.0f}',
+                      ha='right', va='center', color='white', fontweight='bold', fontsize=11)
+            
+            # Customize appearance
+            ax.set_xlabel('Number of Sessions', fontsize=14, fontweight='bold')
+            ax.set_title('Top 10 Countries by Session Count', fontsize=16, fontweight='bold')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            
+            # Invert y-axis for top-to-bottom ranking
+            ax.invert_yaxis()
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            st.write("Shows the distribution of sessions across different countries, highlighting key markets")
+        
+        with hist_tab:
+            st.subheader("Price Distribution by Product Category")
+            
+            # Create mapping for product categories
+            category_map = {1: 'Trousers', 2: 'Skirts', 3: 'Blouses', 4: 'Sale'}
+            
+            # Add category name column for easier filtering
+            df_raw['category_name'] = df_raw['page1_main_category'].map(category_map)
+            
+            # Create figure with subplots
+            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+            axes = axes.flatten()
+            
+            # Define color palette
+            colors = ['#ff9ff3', '#feca57', '#48dbfb', '#1dd1a1']
+            
+            # Create histogram for each category
+            for i, (category_id, category_name) in enumerate(category_map.items()):
+                # Filter data for this category
+                category_data = df_raw[df_raw['page1_main_category'] == category_id]['price']
+                
+                # Create histogram with kernel density estimate
+                sns.histplot(category_data, bins=15, kde=True, color=colors[i], ax=axes[i], alpha=0.7)
+                
+                # Add vertical line for mean price
+                mean_price = category_data.mean()
+                axes[i].axvline(mean_price, color='red', linestyle='--', linewidth=2)
+                axes[i].text(mean_price+1, axes[i].get_ylim()[1]*0.9, f'Mean: ${mean_price:.2f}', 
+                           color='red', fontweight='bold')
+                
+                # Customize plot
+                axes[i].set_title(f'{category_name}', fontsize=14, fontweight='bold')
+                axes[i].set_xlabel('Price ($)', fontsize=12)
+                axes[i].set_ylabel('Frequency', fontsize=12)
+                axes[i].spines['top'].set_visible(False)
+                axes[i].spines['right'].set_visible(False)
+            
+            plt.tight_layout()
+            plt.subplots_adjust(top=0.92)
+            fig.suptitle('Price Distribution by Product Category', fontsize=16, fontweight='bold')
+            
+            st.pyplot(fig)
+            st.write("Shows the price distribution for each product category with mean price highlighted")
+        
+        with pie_tab:
+            st.subheader("Product Category and Price Analysis")
+            
+            # Create mapping for product categories
+            category_map = {1: 'Trousers', 2: 'Skirts', 3: 'Blouses', 4: 'Sale'}
+            
+            # Calculate aggregate data by category
+            category_stats = df_raw.groupby('page1_main_category').agg({
+                'price': ['mean', 'count', 'min', 'max']
+            }).reset_index()
+            
+            # Flatten the MultiIndex columns
+            category_stats.columns = ['category', 'avg_price', 'count', 'min_price', 'max_price']
+            
+            # Add category names
+            category_stats['category_name'] = category_stats['category'].map(category_map)
+            
+            # Calculate percentage of total
+            total_count = category_stats['count'].sum()
+            category_stats['percentage'] = (category_stats['count'] / total_count * 100).round(1)
+            
+            # Create a figure with gridspec for custom layout (pie chart + bar chart)
+            fig = plt.figure(figsize=(14, 10))
+            gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
+            
+            # Pie chart on the left
+            ax1 = fig.add_subplot(gs[0])
+            
+            # Create pie chart with a slight explosion effect
+            explode = [0.05, 0.05, 0.05, 0.05]  # Slight separation for all slices
+            wedges, texts, autotexts = ax1.pie(
+                category_stats['count'], 
+                labels=None,
+                explode=explode,
+                autopct='%1.1f%%',
+                startangle=90, 
+                colors=['#2ecc71', '#3498db', '#9b59b6', '#e74c3c'],
+                wedgeprops=dict(width=0.5, edgecolor='white'),  # Wider donut with white edges
+                pctdistance=0.8,
+                textprops={'fontsize': 12, 'fontweight': 'bold', 'color': 'white'}
+            )
+            
+            # Create a white circle at the center for donut effect
+            centre_circle = plt.Circle((0, 0), 0.25, fc='white')
+            ax1.add_patch(centre_circle)
+            
+            # Add center text showing total count
+            ax1.text(0, 0, f"Total\n{total_count:,}", ha='center', va='center', 
+                   fontsize=16, fontweight='bold')
+            
+            # Create a legend
+            ax1.legend(
+                wedges,
+                [f"{name} ({count:,})" for name, count in zip(category_stats['category_name'], category_stats['count'])],
+                title="Categories",
+                loc="center",
+                bbox_to_anchor=(0.5, -0.1),
+                fontsize=12,
+                ncol=2
+            )
+            
+            ax1.set_title('Product Distribution by Category', fontsize=16, fontweight='bold')
+            
+            # Bar chart on the right showing price comparison
+            ax2 = fig.add_subplot(gs[1])
+            
+            # Create horizontal bars for average prices
+            bars = ax2.barh(
+                category_stats['category_name'],
+                category_stats['avg_price'],
+                color=['#2ecc71', '#3498db', '#9b59b6', '#e74c3c'],
+                alpha=0.8,
+                height=0.5
+            )
+            
+            # Add average price annotations inside bars
+            for i, bar in enumerate(bars):
+                width = bar.get_width()
+                ax2.text(
+                    width/2,
+                    bar.get_y() + bar.get_height()/2,
+                    f"${category_stats['avg_price'].iloc[i]:.2f}",
+                    ha='center',
+                    va='center',
+                    color='white',
+                    fontweight='bold',
+                    fontsize=12
+                )
+            
+            # Add price range annotations to the right of bars
+            for i, (category, avg, min_price, max_price) in enumerate(
+                zip(category_stats['category_name'], 
+                    category_stats['avg_price'],
+                    category_stats['min_price'],
+                    category_stats['max_price'])):
+                ax2.text(
+                    avg + 3,
+                    i,
+                    f"Range: ${min_price:.2f} - ${max_price:.2f}",
+                    va='center',
+                    fontsize=11,
+                    color='#555555'
+                )
+            
+            # Configure bar chart
+            ax2.set_xlabel('Average Price ($)', fontsize=14, fontweight='bold')
+            ax2.set_title('Average Price by Category', fontsize=16, fontweight='bold')
+            ax2.grid(axis='x', linestyle='--', alpha=0.3)
+            ax2.spines['top'].set_visible(False)
+            ax2.spines['right'].set_visible(False)
+            
+            # Set a reasonable x limit with some padding
+            ax2.set_xlim(0, max(category_stats['avg_price']) * 1.3)
+            
+            # Equal aspect ratio ensures the pie is circular
+            ax1.set_aspect('equal')
+            
+            plt.tight_layout()
+            fig.subplots_adjust(wspace=0.3)
+            
+            st.pyplot(fig)
+            st.write("Displays category distribution alongside price analysis")
+        
+        with heatmap_tab:
+            st.subheader("Correlation Between Key Features")
+            
+            # Select only numeric columns for correlation
+            numeric_df = df_raw.select_dtypes(include=['int64', 'float64'])
+            
+            # Drop year and month columns
+            if 'year' in numeric_df.columns:
+                numeric_df = numeric_df.drop(columns=['year'])
+            
+            # Calculate correlation matrix
+            corr_matrix = numeric_df.corr()
+            
+            # Create a mask for the upper triangle
+            mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+            
+            # Set up a custom colormap going from cool to warm
+            cmap = sns.diverging_palette(230, 20, as_cmap=True)
+            
+            # Create heatmap
+            fig, ax = plt.subplots(figsize=(12, 10))
+            
+            # Create heatmap with mask
+            sns.heatmap(corr_matrix, mask=mask, cmap=cmap, vmax=.3, vmin=-.3,
+                     annot=True, fmt=".2f", square=True, linewidths=.5, cbar_kws={"shrink": .8},
+                     annot_kws={"size": 10})
+            
+            # Add custom column name mapping for better readability
+            column_names = {
+                'day': 'Day of Month',
+                'order': 'Click Order',
+                'country': 'Country',
+                'session_id': 'Session ID',
+                'page1_main_category': 'Category',
+                'colour': 'Color',
+                'location': 'Location',
+                'model_photography': 'Photography',
+                'price': 'Price',
+                'price_2': 'High Price',
+                'page': 'Page Number',
+                'month': 'Month'
+            }
+            
+            # Set readable labels
+            readable_labels = [column_names.get(col, col) for col in corr_matrix.columns]
+            ax.set_xticklabels(readable_labels, rotation=45, ha='right', fontsize=12)
+            ax.set_yticklabels(readable_labels, rotation=0, fontsize=12)
+            
+            plt.title('Correlation Between Features', fontsize=16, pad=20)
+            
+            st.pyplot(fig)
+            st.write("Shows relationships between different features in the raw dataset")

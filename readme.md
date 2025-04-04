@@ -1,10 +1,9 @@
-
 # Customer Conversion Analysis App
 
 ## Overview
 This project is a **Customer Conversion Analysis App** built using **Streamlit**. It allows businesses to **analyze, predict, and visualize customer behavior** based on **browsing patterns, product interactions, and conversion data**.
 
-The application provides interactive dashboards for **classification** (predicting conversions), **regression** (predicting prices), and **clustering** (customer segmentation).
+The application provides interactive dashboards for **classification** (predicting conversions), **regression** (predicting prices), **clustering** (customer segmentation), and **exploratory data analysis** (visualizing trends and patterns).
 
 ## Features
 - **Classification Models** – Predict whether a user will convert (make a purchase)
@@ -12,6 +11,8 @@ The application provides interactive dashboards for **classification** (predicti
 - **Customer Clustering** – Segment customers based on browsing and purchasing behavior
 - **Interactive Interface** – Easy-to-use inputs for real-time predictions
 - **Model Performance Metrics** – Compare different algorithms with key performance indicators
+- **Exploratory Data Analysis** – Visualize data patterns with interactive charts and graphs
+- **Multi-dimensional Visualizations** – Analyze relationships between variables with various plot types
 
 ## Prerequisites
 Ensure you have **Python 3.x** installed on your system.
@@ -68,6 +69,14 @@ streamlit run app.py
 - **Feature Engineering**: Extract session metrics, clickstream patterns, and behavioral metrics.
 - **Data Preprocessing**: Handle missing values, scale numerical features, and encode categorical variables.
 
+### Exploratory Data Analysis (EDA)
+- **Interactive Visualizations**: Five different visualization types to explore the raw data
+- **Line Plots**: Analyze price trends across product categories and seasons
+- **Bar Charts**: Compare session distributions across different countries
+- **Histograms**: Examine price distributions for each product category
+- **Pie Charts**: View product category distribution with integrated price analysis
+- **Correlation Heatmaps**: Discover relationships between different features
+
 ## Usage Guide
 
 ### Train Models
@@ -86,6 +95,14 @@ streamlit run app.py
 - After training clustering models, explore the **Cluster Analysis** section.
 - View detailed statistics and characteristics of each customer segment.
 
+### Explore Data Visualizations
+- Navigate to the **EDA** tab to access various data visualizations
+- View price trends by product category across different months
+- Analyze the distribution of sessions by country
+- Examine price distributions for each product category
+- Explore product category distribution and pricing analysis
+- Discover correlations between different features using interactive heatmaps
+
 ## Technologies Used
 - **Python**
 - **Streamlit** (Frontend & UI)
@@ -93,7 +110,7 @@ streamlit run app.py
 - **XGBoost** (Gradient Boosting)
 - **Imbalanced-learn** (Class Imbalance Handling)
 - **Pandas & NumPy** (Data Manipulation)
-- **Matplotlib & Seaborn** (Data Visualization)
+- **Matplotlib & Seaborn** (Advanced Data Visualization)
 
 ## License
 This project is licensed under the **MIT License**.
