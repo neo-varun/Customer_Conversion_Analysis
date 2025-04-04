@@ -4,48 +4,73 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
-from sklearn.metrics import classification_report
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
-from collections import Counter
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
-df = pd.read_csv('data/clean_data.csv')
-X = df.drop(columns=['conversion', 'page'])
-y = df['conversion']
+class ClassificationModels:
 
-print("Original class distribution:", Counter(y))
+    def __init__(self):
+        
+        self.df = pd.read_csv('data/clean_data.csv')
+        self.X = self.df.drop(columns=['conversion'])
+        self.y = self.df['conversion']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    def classification_models(self):
 
-oversample = SMOTE(random_state=42)
-undersample = RandomUnderSampler(random_state=42)
+        from collections import Counter
 
-models = {
-    "LogisticRegression": LogisticRegression(class_weight='balanced', max_iter=1000),
-    "DecisionTree": DecisionTreeClassifier(class_weight='balanced'),
-    "RandomForest": RandomForestClassifier(n_estimators=100, class_weight='balanced'),
-    "XGBoost": XGBClassifier(scale_pos_weight=(y == 0).sum() / (y == 1).sum(), eval_metric='logloss')
-}
+        print("Original class distribution:", Counter(self.y))
 
-# Evaluate each model with SMOTE (oversampling)
-for name, model in models.items():
-    print(f"\n{name} with SMOTE Oversampling:")
-    pipeline = ImbPipeline([
-        ('smote', oversample),
-        ('classifier', model)
-    ])
-    pipeline.fit(X_train, y_train)
-    y_pred = pipeline.predict(X_test)
-    print(classification_report(y_test, y_pred))
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
 
-# Evaluate each model with undersampling
-for name, model in models.items():
-    print(f"\n{name} with Random Undersampling:")
-    pipeline = ImbPipeline([
-        ('undersample', undersample),
-        ('classifier', model)
-    ])
-    pipeline.fit(X_train, y_train)
-    y_pred = pipeline.predict(X_test)
-    print(classification_report(y_test, y_pred))
+        oversample = SMOTE(random_state=42)
+        undersample = RandomUnderSampler(random_state=42)
+
+        models = {
+            "LogisticRegression": LogisticRegression(class_weight='balanced', max_iter=1000),
+            "DecisionTree": DecisionTreeClassifier(class_weight='balanced'),
+            "RandomForest": RandomForestClassifier(n_estimators=100, class_weight='balanced'),
+            "XGBoost": XGBClassifier(scale_pos_weight=(self.y == 0).sum() / (self.y == 1).sum(), eval_metric='logloss')
+        }
+
+        results = {}
+
+        # Evaluate each model with SMOTE (oversampling)
+        for name, model in models.items():
+            pipeline = ImbPipeline([
+                ('smote', oversample),
+                ('classifier', model)
+            ])
+            pipeline.fit(X_train, y_train)
+            y_pred = pipeline.predict(X_test)
+
+            metrics = {
+                "accuracy": accuracy_score(y_test, y_pred),
+                "precision": precision_score(y_test, y_pred),
+                "recall": recall_score(y_test, y_pred),
+                "f1": f1_score(y_test, y_pred),
+                "roc_auc": roc_auc_score(y_test, y_pred)
+            }
+            results[f"{name}_SMOTE"] = metrics
+
+        # Evaluate each model with undersampling
+        for name, model in models.items():
+            pipeline = ImbPipeline([
+                ('undersample', undersample),
+                ('classifier', model)
+            ])
+            pipeline.fit(X_train, y_train)
+            y_pred = pipeline.predict(X_test)
+
+            metrics = {
+                "accuracy": accuracy_score(y_test, y_pred),
+                "precision": precision_score(y_test, y_pred),
+                "recall": recall_score(y_test, y_pred),
+                "f1": f1_score(y_test, y_pred),
+                "roc_auc": roc_auc_score(y_test, y_pred)
+            }
+            results[f"{name}_UnderSampling"] = metrics
+
+        return results

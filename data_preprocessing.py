@@ -5,8 +5,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
 numerical_features = [
-    'order', 'country', 'session_id', 'page1_main_category',
-    'colour', 'location', 'model_photography', 'price', 'page',
+    'order', 'country', 'page1_main_category',
+    'colour', 'location', 'model_photography', 'price',
     'session_length', 'unique_pages', 'bounce', 'exit_rate', 'revisit'
 ]
 categorical_features = ['page2_clothing_model']

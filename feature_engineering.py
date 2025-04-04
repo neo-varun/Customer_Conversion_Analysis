@@ -46,6 +46,7 @@ def process_and_save(input_path, output_path):
     df = clickstream_patterns(df)
     df = behavioral_metrics(df)
     df = conversion_label(df)
+    df=df.drop(columns=['page','session_id'])
     df.to_csv(output_path, index=True)
 
 process_and_save('data/train.csv', 'data/feature_data.csv')
