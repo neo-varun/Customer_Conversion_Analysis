@@ -5,6 +5,8 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import numpy as np
+import pickle
+import os
 
 class RegressionModels:
     
@@ -28,6 +30,12 @@ class RegressionModels:
         }
 
         results = {}
+        
+        # Create artifacts/regression directory if it doesn't exist
+        if not os.path.exists("artifacts"):
+            os.makedirs("artifacts")
+        if not os.path.exists("artifacts/regression"):
+            os.makedirs("artifacts/regression")
 
         for name, model in models.items():
             pipeline = Pipeline([('regressor', model)])
@@ -39,5 +47,10 @@ class RegressionModels:
                 "MAE": mean_absolute_error(self.y_test, y_pred),
                 "R² Score": r2_score(self.y_test, y_pred)
             }
+        
+            # Save each model in the regression folder with its name
+            model_path = f"artifacts/regression/{name}_model.pkl"
+            with open(model_path, "wb") as f:
+                pickle.dump(pipeline, f)
 
         return results

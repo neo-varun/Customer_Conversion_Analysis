@@ -8,6 +8,8 @@ from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.pipeline import Pipeline as ImbPipeline
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+import os
+import pickle
 
 class ClassificationModels:
 
@@ -37,6 +39,12 @@ class ClassificationModels:
 
         results = {}
 
+        # Create artifacts/classification directory if it doesn't exist
+        if not os.path.exists("artifacts"):
+            os.makedirs("artifacts")
+        if not os.path.exists("artifacts/classification"):
+            os.makedirs("artifacts/classification")
+
         # Evaluate each model with SMOTE (oversampling)
         for name, model in models.items():
             pipeline = ImbPipeline([
@@ -54,6 +62,11 @@ class ClassificationModels:
                 "roc_auc": roc_auc_score(y_test, y_pred)
             }
             results[f"{name}_SMOTE"] = metrics
+            
+            # Save SMOTE model
+            model_path = f"artifacts/classification/{name}_SMOTE_model.pkl"
+            with open(model_path, "wb") as f:
+                pickle.dump(pipeline, f)
 
         # Evaluate each model with undersampling
         for name, model in models.items():
@@ -72,5 +85,10 @@ class ClassificationModels:
                 "roc_auc": roc_auc_score(y_test, y_pred)
             }
             results[f"{name}_UnderSampling"] = metrics
+            
+            # Save undersampling model
+            model_path = f"artifacts/classification/{name}_UnderSampling_model.pkl"
+            with open(model_path, "wb") as f:
+                pickle.dump(pipeline, f)
 
         return results
